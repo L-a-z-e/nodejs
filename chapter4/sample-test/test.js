@@ -1,4 +1,4 @@
-const calc = require('sample-package');
+const calc = require('chapter4/sample-package');
 
 const a = 5;
 const b = 3;
