@@ -2,8 +2,16 @@ const express = require('express');
 const handlebars = require('express-handlebars');
 const app = express();
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // mongoDB 연결 함수
 const mongodbConnection = require("./configs/mongodb-connections")
+console.log(mongodbConnection);
+
+const postService = require("./services/post-service");
+
+let collection;
 
 app.engine("handlebars", handlebars.engine()); // 템플릿 엔진으로 handlebars 등록
 app.set("view engine", "handlebars"); // 웹 페이지 로드 시 사용할 템플릿 엔진 설정
@@ -20,11 +28,33 @@ app.get("/write", (req, res) =>{
     res.render("write", {title: "테스트 게시판"});
 });
 
+app.post("/write", async(req, res) => {
+    const post = req.body;
+    const result = await postService.writePost(collection, post);
+    // 도큐먼트의 식별자로 사용할 수 있는 insertedId
+    res.redirect(`/detail/${result.insertedId}`);
+});
+
 app.get("/detail/:id", async(req, res) => {
     res.render("detail", { title: "테스트 게시판"});
 });
 
-let collection;
+app.get("/", async(req, res) => {
+    // 현재 페이지 데이터
+    const page = parseInt(req.query.page) || 1;
+    const search = req.query.search || "";
+
+    try{
+        //postService.list 에서 글 목록, 페이지네이터 가져옴
+        const [posts, paginator] = await postService.list(collection, page, search);
+
+        // 리스트 페이지 렌더링
+        res.render("home", { title: "테스트 게시판", search, paginator, posts });
+    } catch(err) {
+        console.error(err);
+        res.render("error", { title: "테스트 게시판" });
+    }
+});
 app.listen(3000, async () => {
     console.log("Server started");
     // mongodbConnection()의 결과는 mongoClient
@@ -34,3 +64,9 @@ app.listen(3000, async () => {
     console.log("MongoDB connection successfull");
 });
 
+app.engine(
+    "handlebars",
+    handlebars.create({
+        helpers: require("./configs/handlebars-helpers"),
+    }).engine
+)
