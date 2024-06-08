@@ -29,5 +29,6 @@ module.exports = ({ totalCount, page, perPage = 10}) => {
         isFirstPage,
         isLastPage,
     };
+
     return paginator;
-}
+};

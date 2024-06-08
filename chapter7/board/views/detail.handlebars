@@ -1,29 +1,27 @@
 <h1>{{title}}</h1>
-<!-- 게시글 제목 -->
-<h2 class="text-xl">제목입니다.</h2>
-<!-- 작성자 이름 -->
-<div>
-    작성자 :<b>작성자 이름</b>
-</div>
-<!-- 조회수, 작성일시, 버튼 영역 -->
-<div>
-    조회수 : 9999 | 작성일시 : 2024-05-23 00:04:00
-    <button onclick="modifyPost()">수정</button>
-    <button onclick="deletePost()">삭제</button>
-</div>
 
-<div>
-    <!-- 본문 표시영역 -->
-    <pre>본문입니다.</pre>
-</div>
+{{#with post}}
+    <h2 class="text-xl">{{title}}</h2>
+    <div>
+        작성자:<b>{{writer}}</b>
+    </div>
+    <div>
+        조회수 : {{hits}} | 작성일시 : {{dateString createdDt}}
+        <button onClick="modifyPost()">수정</button>
+        <button onClick="deletePost()">삭제</button>
+    </div>
+    <div>
+        <pre>{{content}}</pre>
+    </div>
 
 <section>
     <div>
         <!-- 댓글 개수 표시 -->
-        <h3>3개의 댓글이 있습니다.</h3>
+        <h3>{{lengthOfList comments}}개의 댓글이 있습니다.</h3>
     </div>
 
     <form method="post" action="/write-comment">
+        <input type="hidden" name="id" value="{{_id}}"/>
         <div>
             <div>
                 <input type="text" name="name" placeholder="이름"/>
@@ -39,25 +37,106 @@
         </div>
     </form>
 </section>
-
-<!-- 댓글 표시 영역 -->
+{{/with}}
 <section>
-    <div>
+    <!-- 댓글 표시 영역 -->
+    {{#each comments}}
         <div>
-            작성자 : <b>댓글 작성자</b>
-        </div>
-        <div>
-            작성일시 : 2024-05-23 00:10:00
-            <button onclick="deleteComment('1')">삭제</button>
+            <div>
+                작성자 : <b>{{name}}</b>
+            </div>
+            <div>
+                작성일시 : {{dateString createdDt}}
+                <button onclick="deleteComment('{{idx}}')">삭제</button>
+            </div>
         </div>
         <div>
             <pre>{{comment}}</pre>
         </div>
-    </div>
+    {{/each}}
 </section>
-
 <footer>
     <div>
         <a href="/">목록으로</a>
     </div>
 </footer>
+
+<script>
+    const postOption = {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    }
+    async function modifyPost() {
+        const password = prompt("패스워드를 입력하세요");
+        if(!password) {
+            return;
+        }
+
+        const result = await fetch("/check-password", {
+            ...postOption,
+            body: JSON.stringify({ id : "{{post.id}}", password })
+        });
+
+        const data = await result.json();
+
+        if (data.isExist) {
+            document.location = "/modify/{{post.id}}"
+        } else {
+            alert("패스워드가 올바르지 않습니다.");
+        }
+
+    }
+
+    const deleteOption = {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    }
+    async function deletePost() {
+        // 프롬프트로 값 입력받기
+        const password = prompt("패스워드를 입력하세요.");
+        // 취소시 처리
+        if (!password) {
+            return;
+        }
+
+        // fetchAPI 사용해 deleteAPI 호출
+        const result = await fetch("/delete", {
+            ...deleteOption,
+            body: JSON.stringify({ id: "{{post._id}}", password})
+        });
+
+        const data = await result.json();
+        if (!data.isSuccess) {
+            alert("삭제에 실패했습니다. 패스워드를 확인해주세요.");
+            return;
+        }
+
+        document.location = "/";
+    }
+
+    async function deleteComment(idx) {
+        const password = prompt("패스워드를 입력해주세요.");
+
+        if (!password) {
+            return;
+        }
+
+        const result = await fetch("/delete-comment", {
+            ...deleteOption,
+            body: JSON.stringify({ id: "{{post._id}}", idx, password })
+        });
+
+        const data = await result.json();
+        if (!data.isSuccess) {
+            alert("삭제 실패. 패스워드 확인 필요");
+            return;
+        }
+
+        alert("삭제 성공");
+        document.location.reload();
+    }
+</script>
